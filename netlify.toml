@@ -1,0 +1,12 @@
+# Redirige la raíz al archivo principal
+[[redirects]]
+  from = "/"
+  to = "/index.html"
+  status = 200
+
+# Seguridad básica
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
