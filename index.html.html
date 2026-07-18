@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auditoría de Reposición</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.44.0/iconfont/tabler-icons.min.css">
+
+<!-- ══ FIREBASE SDK — Auditoría de Reposición ══ -->
+<script type="module">
+  import { initializeApp }
+    from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+  import { getFirestore, doc, setDoc, getDoc, onSnapshot }
+    from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+  import { getStorage, ref, uploadBytes, getDownloadURL }
+    from "https://www.gstatic.com/firebasejs/11.0.0/firebase-storage.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCrFXzXL1hoDYRrmXwILK4sSanJ28acOxA",
+    authDomain: "cendis-noc26.firebaseapp.com",
+    projectId: "cendis-noc26",
+    storageBucket: "cendis-noc26.firebasestorage.app",
+    messagingSenderId: "154600562289",
+    appId: "1:154600562289:web:0fcbfa4f1adcb4e2f805d0"
+  };
+
+  const fbApp = initializeApp(firebaseConfig);
+  const db_fb = getFirestore(fbApp);
+  const storage_fb = getStorage(fbApp);
+
+  window.fbUploadPhoto = async (path, blob) => {
+    try {
+      const r = ref(storage_fb, path);
+      await uploadBytes(r, blob, { contentType: 'image/jpeg' });
+      return await getDownloadURL(r);
+    } catch(e) { console.warn('fbUploadPhoto error:', e); return null; }
+  };
+
+  window.fbSave = async (col, id, data) => {
+    try {
+      await setDoc(doc(db_fb, col, id), { payload: JSON.stringify(data) });
+      return true;
+    } catch(e) { console.warn('fbSave error:', e); return false; }
+  };
+
+  window.fbLoad = async (col, id) => {
+    try {
+      const snap = await getDoc(doc(db_fb, col, id));
+      if (snap.exists()) return JSON.parse(snap.data().payload);
+    } catch(e) { console.warn('fbLoad error:', e); }
+    return null;
+  };
+
+  window.fbListen = (col, id, callback) =>
+    onSnapshot(doc(db_fb, col, id), snap => {
+      if (snap.exists()) {
+        try { callback(JSON.parse(snap.data().payload)); } catch(e) {}
+      }
+    }, err => console.warn('fbListen error:', err));
+
+  window.fbSetStatus = (online) => {
+    const dot = document.getElementById('fb-dot');
+    const txt = document.getElementById('fb-txt');
+    if (dot) dot.style.background = online ? '#22c55e' : '#ef4444';
+    if (txt) txt.textContent = online ? '☁ En línea' : '○ Sin conexión';
+  };
+
+  window.__fbReady = true;
+  window.dispatchEvent(new Event('fb-ready'));
+</script>
+<style>
+  :root{
+    --navy:#001F62;
+    --blue-mid:#2A4B85;
+    --blue-sky:#428FDF;
+    --blue-pale:#EAF1FC;
+    --white:#FFFFFF;
+    --gray-bg:#F4F6FA;
+    --gray-border:#DDE3EE;
+    --text-secondary:#5B6B85;
+    --success-bg:#E4F5EA;
+    --success-text:#1E7A43;
+    --success-border:#8FD1AA;
+    --danger-bg:#FBE7E7;
+    --danger-text:#B3261E;
+    --danger-border:#EFA6A2;
+    --warning-bg:#FFF3DE;
+    --warning-text:#8A5A00;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Montserrat',sans-serif;background:var(--gray-bg);color:var(--navy);}
+  #app{max-width:460px;margin:0 auto;min-height:100vh;background:var(--white);box-shadow:0 0 24px rgba(0,31,98,0.08);display:flex;flex-direction:column;}
+
+  header.topbar{background:var(--navy);color:var(--white);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;}
+  header.topbar .brand{display:flex;align-items:center;gap:10px;}
+  header.topbar .brand .logo-dot{width:30px;height:30px;border-radius:50%;background:var(--blue-sky);display:flex;align-items:center;justify-content:center;font-size:15px;}
+  header.topbar h1{font-size:15px;font-weight:600;margin:0;}
+  header.topbar .sub{font-size:11px;color:#B9CBEE;margin:0;}
+
+  nav.tabbar{display:flex;border-bottom:1px solid var(--gray-border);}
+  nav.tabbar button{flex:1;padding:12px 0;background:none;border:none;font-family:inherit;font-size:13px;font-weight:500;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;}
+  nav.tabbar button.active{color:var(--navy);border-bottom:2px solid var(--blue-sky);}
+
+  main{flex:1;padding:20px;}
+
+  .progress-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;}
+  .progress-row .step-title{font-size:16px;font-weight:600;}
+  .progress-row .step-count{font-size:12px;color:var(--text-secondary);background:var(--blue-pale);padding:3px 10px;border-radius:999px;}
+
+  label.field-label{display:block;font-size:12px;font-weight:500;color:var(--text-secondary);margin:14px 0 6px;}
+  label.field-label:first-child{margin-top:0;}
+  select, input[type=text], input[type=number], textarea{
+    width:100%;padding:10px 12px;border:1px solid var(--gray-border);border-radius:8px;
+    font-family:inherit;font-size:14px;background:var(--white);color:var(--navy);
+  }
+  select:focus, input:focus, textarea:focus{outline:none;border-color:var(--blue-sky);box-shadow:0 0 0 3px rgba(66,143,223,0.15);}
+  textarea{resize:vertical;min-height:70px;}
+  input:disabled{background:var(--gray-bg);color:var(--text-secondary);}
+
+  .btn{width:100%;padding:11px 14px;border-radius:8px;border:1px solid var(--gray-border);background:var(--white);
+    font-family:inherit;font-size:14px;font-weight:500;color:var(--navy);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;}
+  .btn:active{transform:scale(0.98);}
+  .btn-primary{background:var(--navy);color:var(--white);border-color:var(--navy);}
+  .btn-scan{background:var(--blue-pale);border-color:var(--blue-sky);color:var(--blue-mid);margin-bottom:10px;}
+  .btn-photo{background:var(--blue-pale);border-color:var(--blue-sky);color:var(--blue-mid);margin-bottom:14px;}
+  .btn-photo.done{background:var(--success-bg);border-color:var(--success-border);color:var(--success-text);}
+
+  .pill-row{display:flex;gap:10px;margin:8px 0 16px;}
+  .pill{flex:1;padding:10px 0;border-radius:8px;border:1px solid var(--gray-border);background:var(--white);
+    font-family:inherit;font-size:13px;font-weight:500;color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;}
+  .pill.si.active{background:var(--success-bg);border-color:var(--success-border);color:var(--success-text);}
+  .pill.no.active{background:var(--danger-bg);border-color:var(--danger-border);color:var(--danger-text);}
+
+  .question{font-size:14px;font-weight:500;margin:0 0 2px;line-height:1.4;}
+
+  .card{background:var(--blue-pale);border-radius:10px;padding:14px;margin:0 0 16px;}
+  .card.warning{background:var(--warning-bg);}
+  .card .result{font-size:14px;font-weight:600;margin:6px 0 0;}
+
+  .nav-buttons{display:flex;gap:10px;margin-top:20px;}
+  .nav-buttons .btn{flex:1;}
+
+  .location-dots{display:flex;gap:6px;margin-bottom:16px;}
+  .location-dots span{width:24px;height:24px;border-radius:50%;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;
+    background:var(--gray-bg);color:var(--text-secondary);border:1px solid var(--gray-border);}
+  .location-dots span.done{background:var(--navy);color:var(--white);border-color:var(--navy);}
+  .location-dots span.current{background:var(--blue-sky);color:var(--white);border-color:var(--blue-sky);}
+
+  .home-hero{background:linear-gradient(180deg,var(--navy) 0%, var(--blue-mid) 100%);border-radius:14px;padding:22px 18px;color:var(--white);margin-bottom:20px;}
+  .home-hero p{margin:4px 0 0;font-size:13px;color:#C7D7F5;}
+  .home-hero h2{margin:0;font-size:19px;font-weight:600;}
+  .kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
+  .kpi{background:var(--gray-bg);border-radius:10px;padding:12px;}
+  .kpi .label{font-size:11px;color:var(--text-secondary);}
+  .kpi .value{font-size:20px;font-weight:600;margin-top:2px;}
+
+  .audit-row{border:1px solid var(--gray-border);border-radius:10px;padding:12px 14px;margin-bottom:10px;}
+  .audit-row .top{display:flex;justify-content:space-between;font-size:13px;font-weight:600;}
+  .audit-row .meta{font-size:12px;color:var(--text-secondary);margin-top:2px;}
+  .audit-row .tags{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+  .tag{font-size:11px;padding:2px 8px;border-radius:999px;}
+  .tag.ok{background:var(--success-bg);color:var(--success-text);}
+  .tag.bad{background:var(--danger-bg);color:var(--danger-text);}
+
+  .empty-state{text-align:center;padding:40px 10px;color:var(--text-secondary);font-size:13px;}
+  .empty-state i{font-size:28px;color:var(--gray-border);display:block;margin-bottom:10px;}
+
+  .toast{position:sticky;bottom:0;background:var(--success-bg);color:var(--success-text);padding:10px 14px;border-radius:8px;font-size:13px;text-align:center;margin-top:12px;}
+
+  @media (max-width: 768px) {
+    .tabbar { overflow-x:auto; flex-wrap:nowrap !important; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+    .tabbar::-webkit-scrollbar { display:none; }
+    button, input, select { min-height:36px; }
+  }
+  @media (max-width: 380px) {
+    .kpi-grid { grid-template-columns: 1fr !important; }
+  }
+</style>
+</head>
+<body>
+<div id="fb-status" style="position:fixed;bottom:12px;right:12px;
+  z-index:9999;background:rgba(0,20,60,.85);color:#fff;font-size:10px;
+  font-weight:700;padding:5px 12px;border-radius:20px;
+  display:flex;align-items:center;gap:6px;">
+  <span id="fb-dot" style="width:7px;height:7px;border-radius:50%;
+    background:#f59e0b;display:inline-block;"></span>
+  <span id="fb-txt">Conectando...</span>
+</div>
+<div id="app"></div>
+
+<script>
+const COL_AUDITS = 'auditoria_reposicion_audits';
+const COL_VENC = 'auditoria_reposicion_vencimientos';
+const COL_CATALOGOS = 'auditoria_reposicion_catalogos';
+const COL_ASIGNACION = 'auditoria_reposicion_asignacion';
+let FB_OK = false;
+
+function waitForFirebase(timeoutMs){
+  return new Promise(resolve => {
+    if(window.__fbReady) return resolve(true);
+    const onReady = () => { window.removeEventListener('fb-ready', onReady); resolve(true); };
+    window.addEventListener('fb-ready', onReady);
+    setTimeout(() => resolve(!!window.__fbReady), timeoutMs || 4000);
+  });
+}
+
+const DEFAULT_CATALOGOS = {
+  usuarios: [
+    'Jesús Vieira - Supervisor',
+    'José Puerta - Coordinador',
+    'Adel González - Asistente de supervisor',
+    'Christopher Serrano - Asistente de supervisor'
+  ],
+  trabajadores: {
+    NOCTURNO: [
+      'Gerardo Araujo - Repositor',
+      'Jhonaiker Da Silva - Repositor',
+      'Daniel Meza - Repositor',
+      'Zamir Rangel - Repositor',
+      'Gabriel González - Repositor',
+      'Nixon Navas - Repositor',
+      'Oscar Infante - Repositor',
+      'Andrew Acuña - Repositor',
+      'Brayan Díaz - Repositor',
+      'Alexis Medina - Repositor',
+      'Andrés Sánchez - Repositor',
+      'Alfonzo Fragiel - Repositor',
+      'José Betancourt - Repositor',
+      'Yonathan Rodríguez - Repositor',
+      'Anyerber Macadan - Repositor'
+    ],
+    DIURNO: [
+      'Héctor Santaella - Repositor',
+      'Eduardo Cádiz - Repositor',
+      'Juan Paredes - Repositor',
+      'Moisés Lugo - Repositor',
+      'José Lugo - Repositor',
+      'César Jiménez - Repositor',
+      'Javier Vásquez - Repositor',
+      'Leornardo Arguello - Repositor',
+      'Danny Díaz - Repositor',
+      'Miguel Ortega - Repositor',
+      'Jesús Arteaga - Repositor',
+      'Víctor Fernández - Repositor',
+      'Yersico Urrutia - Repositor',
+      'José Madriz - Repositor',
+      'Cristian Aponte - Repositor',
+      'Yonaifre García - Repositor',
+      'Yeferson Hernández - Repositor',
+      'Neiken Ginez - Repositor',
+      'Edgar Álvarez - Repositor'
+    ]
+  },
+  zonas: [
+    'ED-EB','EC-EA','PA','PB','FA-FM','FD-FN','HA-HM','HO-HY',
+    'JA-JM','JO-JY','IA-IM','IO-IY','KA-KM','KO-KY','LD-LN',
+    'LP-LZ','LA-LY','MA-MY','MD-MZ','GD-GN','GA-GM'
+  ]
+};
+
+let catalogos = JSON.parse(JSON.stringify(DEFAULT_CATALOGOS));
+let audits = [];
+let vencimientos = [];
+
+function diasRestantes(v){
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const fv = new Date(v.fecha_vencimiento + 'T00:00:00');
+  return Math.round((fv - hoy) / 86400000);
+}
+function claseVencimiento(v){
+  const dias = diasRestantes(v);
+  if(dias > 30) return { nivel:'VERDE', label:'Estable', color:'var(--success-text)', bg:'var(--success-bg)', border:'var(--success-border)' };
+  if(dias >= 15) return { nivel:'AMARILLO', label:'Crítico', color:'var(--warning-text)', bg:'var(--warning-bg)', border:'#F0C674' };
+  return { nivel:'ROJO', label:'Evacuación', color:'var(--danger-text)', bg:'var(--danger-bg)', border:'var(--danger-border)' };
+}
+async function persistVencimiento(v){
+  const idx = vencimientos.findIndex(x => x.id===v.id);
+  if(idx>=0) vencimientos[idx] = v; else vencimientos.unshift(v);
+  if(!FB_OK) return false;
+  try{ return await window.fbSave(COL_VENC, 'main', vencimientos); }
+  catch(e){ console.error('Error guardando vencimiento', e); return false; }
+}
+
+const state = {
+  tab: 'nueva',
+  screen: 'header',
+  ciclo: 1,
+  draft: null,
+  saving: false,
+  justSaved: null,
+  asignacionHoy: null,
+  historialAbierto: null
+};
+
+function newDraft(){
+  return {
+    id: 'aud_' + Date.now(),
+    fecha_hora: new Date().toLocaleString('es-VE'),
+    turno: '', evaluador: '', trabajador: '', zona: '',
+    estatus: null, justificada: false, excluida_cuota: false,
+    ubicaciones: Array.from({length:7}, () => ({code:'', slot:null, puesto:null})),
+    aspectos_m1: '',
+    bultos_identificados: null,
+    fefo: null, foto_fefo: false, foto_fefo_url: null,
+    cinco_s: null, foto_5s: false, foto_5s_url: null,
+    paletas_ok: null, paletas_total:'', paletas_correctas:'',
+    aspectos_trabajador: '',
+    cortes_adecuados: null,
+    ventanas_incumplen: '',
+    equipos_seguridad_ok: null,
+    bulticos_pendientes: null,
+    venc_sku: '', venc_ubicacion: '', venc_fecha: ''
+  };
+}
+
+async function loadAll(){
+  try{
+    await waitForFirebase();
+    FB_OK = typeof window.fbSave === 'function';
+    if(typeof window.fbSetStatus === 'function') window.fbSetStatus(FB_OK);
+    if(!FB_OK){ render(); return; }
+    try{
+      const cat = await window.fbLoad(COL_CATALOGOS, 'main');
+      if(cat){
+        const validoNuevoEsquema = cat.trabajadores && !Array.isArray(cat.trabajadores)
+          && Array.isArray(cat.trabajadores.NOCTURNO) && Array.isArray(cat.trabajadores.DIURNO);
+        catalogos = validoNuevoEsquema ? cat : JSON.parse(JSON.stringify(DEFAULT_CATALOGOS));
+      }
+    }catch(e){ /* no catalogos guardados aun, se usan los valores por defecto */ }
+    try{
+      const a = await window.fbLoad(COL_AUDITS, 'main');
+      if(Array.isArray(a)) audits = a.slice().sort((x,y) => y.id.localeCompare(x.id));
+    }catch(e){ console.error('Error cargando historial', e); }
+    try{
+      const v = await window.fbLoad(COL_VENC, 'main');
+      if(Array.isArray(v)) vencimientos = v;
+    }catch(e){ console.error('Error cargando vencimientos', e); }
+    try{
+      state.asignacionHoy = await getOrCreateAsignacionDiaria();
+    }catch(e){ console.error('Error calculando asignacion diaria', e); state.asignacionHoy = null; }
+
+    window.fbListen(COL_AUDITS, 'main', (data) => {
+      if(Array.isArray(data)){ audits = data.slice().sort((x,y) => y.id.localeCompare(x.id)); render(); }
+    });
+    window.fbListen(COL_VENC, 'main', (data) => {
+      if(Array.isArray(data)){ vencimientos = data; render(); }
+    });
+
+    render();
+  }catch(e){
+    console.error('Error inicializando la app', e);
+    try{ render(); }catch(e2){
+      document.getElementById('app').innerHTML = '<div style="padding:24px;font-family:sans-serif;color:#B3261E;">Ocurrió un error cargando la app. Revisa la consola para más detalle.</div>';
+    }
+  }
+}
+
+async function persistAudit(a){
+  if(!FB_OK) return false;
+  try{ return await window.fbSave(COL_AUDITS, 'main', audits); }
+  catch(e){ console.error('Error guardando auditoria', e); return false; }
+}
+
+async function persistCatalogos(){
+  if(!FB_OK) return;
+  try{ await window.fbSave(COL_CATALOGOS, 'main', catalogos); }
+  catch(e){ console.error('Error guardando catalogos', e); }
+}
+
+function auditDate(a){
+  const ts = Number(a.id.replace('aud_',''));
+  return isNaN(ts) ? new Date() : new Date(ts);
+}
+
+function isoWeekKey(date){
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = (d.getUTCDay() + 6) % 7;
+  d.setUTCDate(d.getUTCDate() - dayNum + 3);
+  const firstThursday = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+  const weekNum = 1 + Math.round(((d - firstThursday) / 86400000 - 3 + (firstThursday.getUTCDay()+6)%7) / 7);
+  return d.getUTCFullYear() + '-W' + String(weekNum).padStart(2,'0');
+}
+
+function categoriaStats(){
+  const cats = {
+    'Procesamiento y cortes': [],
+    'Seguridad industrial': [],
+    'FEFO y rotación': [],
+    'Orden y almacenaje': []
+  };
+  audits.forEach(a => {
+    if(a.cortes_adecuados) cats['Procesamiento y cortes'].push(a.cortes_adecuados==='SI');
+    if(a.equipos_seguridad_ok) cats['Seguridad industrial'].push(a.equipos_seguridad_ok==='SI');
+    if(a.fefo) cats['FEFO y rotación'].push(a.fefo==='SI');
+    if(a.bultos_identificados) cats['Orden y almacenaje'].push(a.bultos_identificados==='SI');
+    if(a.cinco_s) cats['Orden y almacenaje'].push(a.cinco_s==='SI');
+    if(pctVentanas(a)!==null) cats['Orden y almacenaje'].push(pctVentanas(a)>=90);
+    if(a.bulticos_pendientes) cats['Orden y almacenaje'].push(a.bulticos_pendientes==='NO');
+  });
+  return Object.entries(cats).map(([nombre, arr]) => ({
+    nombre,
+    pct: arr.length ? Math.round((arr.filter(Boolean).length/arr.length)*100) : null,
+    n: arr.length
+  }));
+}
+
+function frecuenciaStats(){
+  const semanaActual = isoWeekKey(new Date());
+  const build = (turno) => catalogos.trabajadores[turno].map(t => {
+    const count = audits.filter(a => a.trabajador===t && a.turno===turno && !a.excluida_cuota && isoWeekKey(auditDate(a))===semanaActual).length;
+    return { trabajador: t, count, cumplido: count>=1 };
+  });
+  return { DIURNO: build('DIURNO'), NOCTURNO: build('NOCTURNO') };
+}
+
+function hashStr(str){
+  let h = 0;
+  for(let i=0;i<str.length;i++){ h = (h<<5) - h + str.charCodeAt(i); h |= 0; }
+  return h >>> 0;
+}
+function mulberry32(seed){
+  return function(){
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function seededShuffle(arr, seed){
+  const rnd = mulberry32(seed);
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){ const j = Math.floor(rnd()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+function dateKeyOf(date){
+  return date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0');
+}
+function todayKey(){
+  return dateKeyOf(new Date());
+}
+function trabajadoresEvaluadosHoy(){
+  const hoy = todayKey();
+  return new Set(audits.filter(a => dateKeyOf(auditDate(a)) === hoy).map(a => a.trabajador));
+}
+async function getOrCreateAsignacionDiaria(){
+  const key = todayKey();
+  const generar = () => ({
+    fecha:key,
+    DIURNO: seededShuffle(catalogos.trabajadores.DIURNO, hashStr(key+'-DIURNO')).slice(0,2),
+    NOCTURNO: seededShuffle(catalogos.trabajadores.NOCTURNO, hashStr(key+'-NOCTURNO')).slice(0,2)
+  });
+  if(!FB_OK){ return generar(); }
+  try{
+    const existing = await window.fbLoad(COL_ASIGNACION, key);
+    if(existing && Array.isArray(existing.DIURNO) && Array.isArray(existing.NOCTURNO)) return existing;
+  }catch(e){ /* aún no existe para hoy, se crea abajo */ }
+  const asignacion = { ...generar(), generado_en: new Date().toISOString() };
+  try{ await window.fbSave(COL_ASIGNACION, key, asignacion); }
+  catch(e){ console.error('Error guardando asignacion diaria', e); }
+  return asignacion;
+}
+
+function pctPaletas(a){
+  const t = Number(a.paletas_total), c = Number(a.paletas_correctas);
+  if(!t || t<=0 || a.paletas_correctas === '') return null;
+  return Math.round((c/t)*100);
+}
+
+const TOTAL_VENTANAS = 41;
+function pctVentanas(a){
+  if(a.ventanas_incumplen === '' || a.ventanas_incumplen === null) return null;
+  const incumplen = Number(a.ventanas_incumplen);
+  if(isNaN(incumplen) || incumplen < 0 || incumplen > TOTAL_VENTANAS) return null;
+  return Math.round(((TOTAL_VENTANAS - incumplen) / TOTAL_VENTANAS) * 1000) / 10;
+}
+
+function slotComplianceOf(a){
+  const answered = a.ubicaciones.filter(u => u.slot);
+  if(!answered.length) return null;
+  const ok = answered.filter(u => u.slot === 'SI').length;
+  return Math.round((ok/answered.length)*100);
+}
+
+function el(html){ const d=document.createElement('div'); d.innerHTML=html.trim(); return d.firstElementChild; }
+
+function abrirCamara(opts){
+  const modoBarcode = !!(opts && opts.modoBarcode);
+  return new Promise(async (resolve) => {
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      alert('Este navegador no soporta acceso a la cámara.');
+      resolve(null); return;
+    }
+    let stream;
+    try{
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    }catch(e){
+      alert('No se pudo acceder a la cámara. Revisa los permisos del navegador para este sitio.');
+      resolve(null); return;
+    }
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:#000;z-index:99999;display:flex;flex-direction:column;';
+    const video = document.createElement('video');
+    video.autoplay = true; video.playsInline = true; video.muted = true;
+    video.style.cssText = 'flex:1;width:100%;object-fit:cover;';
+    video.srcObject = stream;
+    const hint = document.createElement('div');
+    hint.style.cssText = 'color:#fff;text-align:center;font-family:sans-serif;font-size:12px;padding:8px;';
+    hint.textContent = modoBarcode ? 'Apunte al código de barras' : 'Encuadre la evidencia y capture';
+    const bar = document.createElement('div');
+    bar.style.cssText = 'padding:14px;display:flex;gap:10px;background:#000;';
+    const btnCap = document.createElement('button');
+    btnCap.style.cssText = 'flex:1;padding:14px;border-radius:10px;border:none;background:#fff;font-weight:700;font-family:inherit;';
+    const btnCancel = document.createElement('button');
+    btnCancel.textContent = 'Cancelar';
+    btnCancel.style.cssText = 'flex:1;padding:14px;border-radius:10px;border:1px solid #fff;background:transparent;color:#fff;font-weight:700;font-family:inherit;';
+    bar.appendChild(btnCap); bar.appendChild(btnCancel);
+    overlay.appendChild(hint); overlay.appendChild(video); overlay.appendChild(bar);
+    document.body.appendChild(overlay);
+
+    let activo = true;
+    const cleanup = () => { activo = false; stream.getTracks().forEach(t=>t.stop()); overlay.remove(); };
+    btnCancel.onclick = () => { cleanup(); resolve(null); };
+
+    const capturarFrame = () => new Promise(res => {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 640; canvas.height = video.videoHeight || 480;
+      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(b => res({ blob:b, dataUrl: canvas.toDataURL('image/jpeg',0.7) }), 'image/jpeg', 0.7);
+    });
+
+    if(modoBarcode && 'BarcodeDetector' in window){
+      btnCap.textContent = 'Escribir código manualmente';
+      let detector;
+      try{ detector = new window.BarcodeDetector(); }catch(e){ detector = null; }
+      btnCap.onclick = async () => { const frame = await capturarFrame(); cleanup(); resolve({ manual:true, ...frame }); };
+      const loop = async () => {
+        if(!activo) return;
+        if(detector){
+          try{
+            const codes = await detector.detect(video);
+            if(codes && codes.length){
+              const frame = await capturarFrame();
+              cleanup();
+              resolve({ code: codes[0].rawValue, ...frame });
+              return;
+            }
+          }catch(e){}
+        }
+        requestAnimationFrame(loop);
+      };
+      requestAnimationFrame(loop);
+    } else {
+      btnCap.textContent = modoBarcode ? 'Capturar y escribir código' : 'Capturar foto';
+      btnCap.onclick = async () => {
+        const frame = await capturarFrame();
+        cleanup();
+        resolve(modoBarcode ? { manual:true, ...frame } : frame);
+      };
+    }
+  });
+}
+
+function pillsSVG(id,current,onSi,onNo){
+  return `<div class="pill-row" id="${id}">
+    <button class="pill si ${current==='SI'?'active':''}" data-val="SI"><i class="ti ti-check"></i> Sí</button>
+    <button class="pill no ${current==='NO'?'active':''}" data-val="NO"><i class="ti ti-x"></i> No</button>
+  </div>`;
+}
+
+function render(){
+  const app = document.getElementById('app');
+  try{
+    renderInner(app);
+  }catch(e){
+    console.error('Error renderizando la app', e);
+    app.innerHTML = '<div style="padding:24px;font-family:sans-serif;color:#B3261E;">Ocurrió un error mostrando esta pantalla. Revisa la consola para más detalle.</div>';
+  }
+}
+
+function renderInner(app){
+  app.innerHTML = '';
+  app.appendChild(el(`
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo-dot"><i class="ti ti-clipboard-check"></i></div>
+        <div>
+          <h1>Auditoría de reposición</h1>
+          <p class="sub">ERI · Slotting · FEFO</p>
+        </div>
+      </div>
+      <i class="ti ti-building-warehouse" style="font-size:22px;color:#B9CBEE;"></i>
+    </header>
+  `));
+
+  const alertasRojas = vencimientos.filter(v => !v.resuelto && claseVencimiento(v).nivel==='ROJO').length;
+  const tabbar = el(`<nav class="tabbar">
+    <button data-tab="nueva" class="${state.tab==='nueva'?'active':''}"><i class="ti ti-plus" style="margin-right:4px;"></i>Nueva</button>
+    <button data-tab="historial" class="${state.tab==='historial'?'active':''}"><i class="ti ti-history" style="margin-right:4px;"></i>Histórico</button>
+    <button data-tab="frecuencia" class="${state.tab==='frecuencia'?'active':''}"><i class="ti ti-calendar-stats" style="margin-right:4px;"></i>Frecuencia</button>
+    <button data-tab="vencimiento" class="${state.tab==='vencimiento'?'active':''}" style="position:relative;"><i class="ti ti-clock-exclamation" style="margin-right:4px;"></i>Vencimiento${alertasRojas>0?` <span style="background:var(--danger-text);color:#fff;border-radius:999px;font-size:10px;padding:1px 6px;margin-left:3px;">${alertasRojas}</span>`:''}</button>
+  </nav>`);
+  tabbar.querySelectorAll('button').forEach(b => b.onclick = () => {
+    state.tab = b.dataset.tab;
+    if(state.tab === 'nueva' && !state.draft){ state.draft = newDraft(); state.screen='header'; state.ciclo=1; }
+    render();
+  });
+  app.appendChild(tabbar);
+
+  if(state.asignacionHoy && Array.isArray(state.asignacionHoy.DIURNO) && Array.isArray(state.asignacionHoy.NOCTURNO) && (state.tab==='nueva' || state.tab==='historial')){
+    const a = state.asignacionHoy;
+    if(state.tab==='historial'){
+      const nomD = a.DIURNO.map(t => t.split(' - ')[0]).join(' y ');
+      const nomN = a.NOCTURNO.map(t => t.split(' - ')[0]).join(' y ');
+      app.appendChild(el(`
+        <div style="background:var(--blue-pale);border-left:4px solid var(--blue-sky);margin:16px 20px 0;padding:12px 14px;border-radius:8px;">
+          <p style="margin:0;font-size:11px;font-weight:700;color:var(--blue-mid);text-transform:uppercase;letter-spacing:0.04em;"><i class="ti ti-shield-check"></i> Auditoría de hoy</p>
+          <p style="margin:6px 0 0;font-size:13px;color:var(--navy);">☀️ Diurno: <strong>${nomD}</strong></p>
+          <p style="margin:2px 0 0;font-size:13px;color:var(--navy);">🌙 Nocturno: <strong>${nomN}</strong></p>
+        </div>
+      `));
+    } else {
+      const evaluadosHoy = trabajadoresEvaluadosHoy();
+      const pendD = a.DIURNO.filter(t => !evaluadosHoy.has(t));
+      const pendN = a.NOCTURNO.filter(t => !evaluadosHoy.has(t));
+      if(!pendD.length && !pendN.length){
+        app.appendChild(el(`
+          <div style="background:var(--success-bg);border-left:4px solid var(--success-border);margin:16px 20px 0;padding:16px 14px;border-radius:8px;text-align:center;">
+            <p style="margin:0;font-size:14px;font-weight:700;color:var(--success-text);"><i class="ti ti-circle-check"></i> Checklist Realizados</p>
+          </div>
+        `));
+      } else {
+        const lineaD = pendD.length ? `<strong>${pendD.map(t=>t.split(' - ')[0]).join(' y ')}</strong>` : '✅ Completado';
+        const lineaN = pendN.length ? `<strong>${pendN.map(t=>t.split(' - ')[0]).join(' y ')}</strong>` : '✅ Completado';
+        app.appendChild(el(`
+          <div style="background:var(--blue-pale);border-left:4px solid var(--blue-sky);margin:16px 20px 0;padding:12px 14px;border-radius:8px;">
+            <p style="margin:0;font-size:11px;font-weight:700;color:var(--blue-mid);text-transform:uppercase;letter-spacing:0.04em;"><i class="ti ti-shield-check"></i> Auditoría de hoy</p>
+            <p style="margin:6px 0 0;font-size:13px;color:var(--navy);">☀️ Diurno: ${lineaD}</p>
+            <p style="margin:2px 0 0;font-size:13px;color:var(--navy);">🌙 Nocturno: ${lineaN}</p>
+          </div>
+        `));
+      }
+    }
+  }
+
+  const rojasHome = vencimientos.filter(v => !v.resuelto && claseVencimiento(v).nivel==='ROJO');
+  if(rojasHome.length){
+    app.appendChild(el(`
+      <div style="background:var(--danger-bg);border-left:4px solid var(--danger-text);margin:12px 20px 0;padding:12px 14px;border-radius:8px;">
+        <p style="margin:0;font-size:11px;font-weight:700;color:var(--danger-text);text-transform:uppercase;letter-spacing:0.04em;"><i class="ti ti-alert-triangle"></i> Alerta de vencimiento</p>
+        <p style="margin:6px 0 0;font-size:13px;color:var(--navy);"><strong>${rojasHome.length}</strong> producto(s) en estado de evacuación (&lt;15 días) — revisa la pestaña Vencimiento.</p>
+      </div>
+    `));
+  }
+
+  const main = document.createElement('main');
+  app.appendChild(main);
+
+  if(!FB_OK){
+    main.appendChild(el(`<div class="card warning" style="margin-bottom:16px;"><p style="margin:0;font-size:13px;">Sin conexión a la base de datos compartida — los datos no se guardarán ni se sincronizarán con el equipo hasta que se restablezca la conexión.</p></div>`));
+  }
+
+  if(state.tab === 'historial'){ renderHistorial(main); return; }
+  if(state.tab === 'frecuencia'){ renderFrecuencia(main); return; }
+  if(state.tab === 'vencimiento'){ renderVencimiento(main); return; }
+
+  if(!state.draft){ state.draft = newDraft(); state.screen = 'header'; state.ciclo = 1; }
+  renderNueva(main);
+}
+
+function renderHistorial(main){
+  if(state.justSaved !== null){
+    const ok = state.justSaved;
+    main.appendChild(el(`<div class="toast" style="margin-bottom:14px;${ok?'':'background:var(--danger-bg);color:var(--danger-text);'}">
+      <i class="ti ${ok?'ti-circle-check':'ti-alert-triangle'}"></i> ${ok ? 'Auditoría guardada correctamente' : 'No se pudo guardar en el almacenamiento compartido — verifica tu conexión'}
+    </div>`));
+    const flag = state.justSaved;
+    state.justSaved = null;
+    setTimeout(() => { if(state.tab==='historial'){ render(); } }, 3000);
+  }
+
+  main.appendChild(el(`
+    <div class="kpi-grid">
+      <div class="kpi"><div class="label">Auditorías registradas</div><div class="value">${audits.length}</div></div>
+      <div class="kpi"><div class="label">Cumplimiento slot promedio</div><div class="value">${avgSlot()}</div></div>
+    </div>
+  `));
+
+  if(audits.length){
+    main.appendChild(el(`<p class="field-label" style="margin:0 0 8px;">Cumplimiento global por categoría</p>`));
+    const wrap = document.createElement('div');
+    wrap.style.marginBottom = '18px';
+    categoriaStats().forEach(c => {
+      const color = c.pct===null ? 'var(--text-secondary)' : c.pct>=90 ? 'var(--success-text)' : c.pct>=70 ? 'var(--warning-text)' : 'var(--danger-text)';
+      const bg = c.pct===null ? 'var(--gray-bg)' : c.pct>=90 ? 'var(--success-bg)' : c.pct>=70 ? 'var(--warning-bg)' : 'var(--danger-bg)';
+      wrap.appendChild(el(`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-radius:8px;background:${bg};margin-bottom:6px;">
+        <span style="font-size:13px;color:var(--navy);">${c.nombre}</span>
+        <span style="font-size:13px;font-weight:600;color:${color};">${c.pct===null?'Sin datos':c.pct+'%'}</span>
+      </div>`));
+    });
+    main.appendChild(wrap);
+  }
+  if(!audits.length){
+    main.appendChild(el(`<div class="empty-state"><i class="ti ti-clipboard-off"></i>Aún no hay auditorías registradas.<br>Todas las auditorías se comparten aquí en tiempo real.</div>`));
+    return;
+  }
+
+  const porTurno = { DIURNO: audits.filter(a=>a.turno==='DIURNO'), NOCTURNO: audits.filter(a=>a.turno==='NOCTURNO') };
+  const sinTurno = audits.filter(a=>!a.turno);
+
+  [['DIURNO','☀️ Turno diurno'], ['NOCTURNO','🌙 Turno nocturno']].forEach(([key,label]) => {
+    const lista = porTurno[key];
+    const abierto = state.historialAbierto === key;
+    const section = document.createElement('div');
+    section.style.marginBottom = '14px';
+    const header = el(`<button style="width:100%;display:flex;justify-content:space-between;align-items:center;background:var(--gray-bg);border:1px solid var(--gray-border);border-radius:10px;padding:12px 14px;font-family:inherit;cursor:pointer;">
+      <span style="font-size:14px;font-weight:600;color:var(--navy);">${label}</span>
+      <span style="display:flex;align-items:center;gap:8px;">
+        <span class="tag" style="background:var(--blue-pale);color:var(--blue-mid);">${lista.length}</span>
+        <i class="ti ${abierto?'ti-chevron-up':'ti-chevron-down'}" style="color:var(--text-secondary);"></i>
+      </span>
+    </button>`);
+    header.onclick = () => { state.historialAbierto = abierto ? null : key; render(); };
+    section.appendChild(header);
+    if(abierto){
+      const body = document.createElement('div');
+      body.style.marginTop = '10px';
+      if(!lista.length){
+        body.appendChild(el(`<div class="empty-state" style="padding:20px 10px;">Sin auditorías registradas en este turno todavía.</div>`));
+      } else {
+        lista.forEach(a => body.appendChild(auditRowEl(a)));
+      }
+      section.appendChild(body);
+    }
+    main.appendChild(section);
+  });
+
+  if(sinTurno.length){
+    main.appendChild(el(`<p class="field-label" style="margin:14px 0 8px;">Sin turno registrado</p>`));
+    sinTurno.forEach(a => main.appendChild(auditRowEl(a)));
+  }
+}
+
+function auditRowEl(a){
+  if(a.justificada || a.excluida_cuota){
+    const labelMap = {VACACIONES:'Vacaciones', REPOSO:'Reposo'};
+    const esDiaLibre = a.excluida_cuota;
+    const tagStyle = esDiaLibre
+      ? 'background:var(--gray-bg);color:var(--text-secondary);border:1px solid var(--gray-border);'
+      : 'background:var(--warning-bg);color:var(--warning-text);';
+    const tagText = esDiaLibre ? 'Día Libre · Pendiente de reprogramación' : `Justificada · ${labelMap[a.estatus] || a.estatus}`;
+    return el(`
+      <div class="audit-row">
+        <div class="top"><span>${a.trabajador || 'Sin trabajador'}</span><span style="color:var(--text-secondary);font-weight:400;">${a.fecha_hora}</span></div>
+        <div class="meta">${a.zona || '—'} · Evaluó: ${a.evaluador || '—'}</div>
+        <div class="tags">
+          <span class="tag" style="${tagStyle}">${tagText}</span>
+        </div>
+      </div>
+    `);
+  }
+  const pctVent = pctVentanas(a);
+  return el(`
+    <div class="audit-row">
+      <div class="top"><span>${a.trabajador || 'Sin trabajador'}</span><span style="color:var(--text-secondary);font-weight:400;">${a.fecha_hora}</span></div>
+      <div class="meta">${a.zona || '—'} · Evaluó: ${a.evaluador || '—'}</div>
+      <div class="tags">
+        ${a.fefo ? `<span class="tag ${a.fefo==='SI'?'ok':'bad'}">FEFO ${a.fefo}</span>` : ''}
+        ${a.cinco_s ? `<span class="tag ${a.cinco_s==='SI'?'ok':'bad'}">5S ${a.cinco_s}</span>` : ''}
+        ${pctVent!==null ? `<span class="tag ${pctVent>=90?'ok':'bad'}">Ventanas ${pctVent}%</span>` : ''}
+        ${a.equipos_seguridad_ok ? `<span class="tag ${a.equipos_seguridad_ok==='SI'?'ok':'bad'}">EPP ${a.equipos_seguridad_ok}</span>` : ''}
+      </div>
+    </div>
+  `);
+}
+
+function avgSlot(){
+  const vals = audits.map(slotComplianceOf).filter(v => v!==null);
+  if(!vals.length) return '—';
+  return Math.round(vals.reduce((a,b)=>a+b,0)/vals.length) + '%';
+}
+
+function renderVencimiento(main){
+  const pendientes = vencimientos.filter(v => !v.resuelto).map(v => ({...v, _clase: claseVencimiento(v), _dias: diasRestantes(v)}))
+    .sort((a,b) => a._dias - b._dias);
+  const resueltos = vencimientos.filter(v => v.resuelto);
+
+  const counts = {VERDE:0, AMARILLO:0, ROJO:0};
+  pendientes.forEach(v => counts[v._clase.nivel]++);
+  main.appendChild(el(`
+    <div class="kpi-grid">
+      <div class="kpi" style="background:var(--danger-bg);"><div class="label" style="color:var(--danger-text);">🔴 Evacuación</div><div class="value" style="color:var(--danger-text);">${counts.ROJO}</div></div>
+      <div class="kpi" style="background:var(--warning-bg);"><div class="label" style="color:var(--warning-text);">🟡 Crítico</div><div class="value" style="color:var(--warning-text);">${counts.AMARILLO}</div></div>
+    </div>
+  `));
+
+  if(!pendientes.length){
+    main.appendChild(el(`<div class="empty-state"><i class="ti ti-rosette-discount-check"></i>No hay productos pendientes de rotación registrados.</div>`));
+  }
+
+  pendientes.forEach(v => {
+    const c = v._clase;
+    const row = el(`
+      <div class="audit-row" style="border-color:${c.border};background:${c.bg};">
+        <div class="top"><span>${v.sku}</span><span style="color:${c.color};font-weight:700;">${v._dias<0 ? 'Vencido hace '+Math.abs(v._dias)+'d' : v._dias+' días'}</span></div>
+        <div class="meta">${v.ubicacion || '—'} · Vence: ${v.fecha_vencimiento} · ${v.turno==='NOCTURNO'?'Nocturno':'Diurno'}</div>
+        <div class="tags" style="margin-bottom:${c.nivel==='VERDE'?'0':'8px'};">
+          <span class="tag" style="background:${c.bg};color:${c.color};border:1px solid ${c.border};">${c.nivel==='ROJO'?'🔴':c.nivel==='AMARILLO'?'🟡':'🟢'} ${c.label}</span>
+        </div>
+      </div>
+    `);
+    if(c.nivel !== 'VERDE'){
+      const actions = el(`<div style="display:flex;gap:8px;margin:-4px 0 10px;">
+        <button class="btn" data-action="despachado" style="font-size:12px;padding:8px;"><i class="ti ti-truck-delivery"></i> Despachada</button>
+        <button class="btn" data-action="aislada" style="font-size:12px;padding:8px;"><i class="ti ti-quarantine"></i> Extraída/Aislada</button>
+      </div>`);
+      actions.querySelector('[data-action="despachado"]').onclick = () => resolverVencimiento(v.id, 'DESPACHADA_CON_EXITO');
+      actions.querySelector('[data-action="aislada"]').onclick = () => resolverVencimiento(v.id, 'EXTRAIDA_AISLADA');
+      row.appendChild(actions);
+    }
+    main.appendChild(row);
+  });
+
+  if(resueltos.length){
+    main.appendChild(el(`<p class="field-label" style="margin:16px 0 8px;">Resueltos (${resueltos.length})</p>`));
+    resueltos.slice(0,10).forEach(v => {
+      const label = v.resuelto_accion==='DESPACHADA_CON_EXITO' ? 'Despachada con éxito' : 'Extraída / aislada';
+      main.appendChild(el(`<div class="audit-row">
+        <div class="top"><span>${v.sku}</span><span style="color:var(--text-secondary);font-weight:400;">${v.resuelto_en}</span></div>
+        <div class="meta">${v.ubicacion || '—'} · ${label}</div>
+      </div>`));
+    });
+  }
+}
+
+async function resolverVencimiento(id, accion){
+  const v = vencimientos.find(x => x.id===id);
+  if(!v) return;
+  v.resuelto = true;
+  v.resuelto_accion = accion;
+  v.resuelto_en = new Date().toLocaleString('es-VE');
+  await persistVencimiento(v);
+  render();
+}
+
+function renderFrecuencia(main){
+  const stats = frecuenciaStats();
+  const semana = isoWeekKey(new Date());
+  const cumplidosD = stats.DIURNO.filter(s => s.cumplido).length;
+  const cumplidosN = stats.NOCTURNO.filter(s => s.cumplido).length;
+  main.appendChild(el(`
+    <div class="kpi-grid">
+      <div class="kpi"><div class="label">Semana actual</div><div class="value" style="font-size:15px;">${semana}</div></div>
+      <div class="kpi"><div class="label">Meta semanal</div><div class="value" style="font-size:15px;">1 / trabajador</div></div>
+    </div>
+  `));
+
+  main.appendChild(el(`<p class="field-label" style="margin:0 0 4px;">☀️ Turno diurno — ${cumplidosD}/${stats.DIURNO.length} al día</p>`));
+  stats.DIURNO.forEach(s => {
+    main.appendChild(el(`<div class="audit-row" style="display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:13px;">${s.trabajador}</span>
+      <span class="tag ${s.cumplido?'ok':'bad'}">${s.count}/1 esta semana</span>
+    </div>`));
+  });
+
+  main.appendChild(el(`<p class="field-label" style="margin:18px 0 4px;">🌙 Turno nocturno — ${cumplidosN}/${stats.NOCTURNO.length} al día</p>`));
+  stats.NOCTURNO.forEach(s => {
+    main.appendChild(el(`<div class="audit-row" style="display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:13px;">${s.trabajador}</span>
+      <span class="tag ${s.cumplido?'ok':'bad'}">${s.count}/1 esta semana</span>
+    </div>`));
+  });
+}
+
+function renderNueva(main){
+  const d = state.draft;
+  if(state.screen === 'header'){
+    main.appendChild(el(`<div class="progress-row"><span class="step-title">Datos de control</span><span class="step-count">Módulo 1 de 5</span></div>`));
+    main.appendChild(el(`<label class="field-label">Fecha de realización</label><input type="text" value="${d.fecha_hora}" disabled>`));
+
+    const selTurno = el(`<div><label class="field-label">Turno</label><select id="sel-turno">
+      <option value="">Seleccione...</option>
+      <option value="NOCTURNO" ${d.turno==='NOCTURNO'?'selected':''}>Nocturno</option>
+      <option value="DIURNO" ${d.turno==='DIURNO'?'selected':''}>Diurno</option>
+    </select></div>`);
+    main.appendChild(selTurno);
+    selTurno.querySelector('select').onchange = e => { d.turno = e.target.value; d.trabajador=''; render(); };
+
+    const selEval = el(`<div><label class="field-label">Evaluador</label><select id="sel-eval">
+      <option value="">Seleccione...</option>
+      ${catalogos.usuarios.map(u=>`<option ${d.evaluador===u?'selected':''}>${u}</option>`).join('')}
+    </select></div>`);
+    main.appendChild(selEval);
+    selEval.querySelector('select').onchange = e => { d.evaluador = e.target.value; };
+
+    const listaTrabTurno = d.turno ? catalogos.trabajadores[d.turno] : [];
+    const asignadosHoy = (d.turno && state.asignacionHoy) ? state.asignacionHoy[d.turno] : [];
+    const listaTrab = listaTrabTurno.filter(t => asignadosHoy.includes(t));
+    const sinAsignadosEnTurno = d.turno && listaTrab.length === 0;
+    const selTrab = el(`<div><label class="field-label">Trabajador evaluado</label><select id="sel-trab" ${!d.turno || sinAsignadosEnTurno?'disabled':''}>
+      <option value="">${!d.turno ? 'Seleccione un turno primero' : sinAsignadosEnTurno ? 'Ningún trabajador de este turno fue asignado hoy' : 'Seleccione...'}</option>
+      ${listaTrab.map(t=>`<option ${d.trabajador===t?'selected':''}>${t}</option>`).join('')}
+    </select></div>`);
+    main.appendChild(selTrab);
+    selTrab.querySelector('select').onchange = e => { d.trabajador = e.target.value; d.estatus = null; render(); };
+
+    const selZona = el(`<div><label class="field-label">Zona de reposición</label><select id="sel-zona">
+      <option value="">Seleccione...</option>
+      ${catalogos.zonas.map(z=>`<option ${d.zona===z?'selected':''}>${z}</option>`).join('')}
+    </select></div>`);
+    main.appendChild(selZona);
+    selZona.querySelector('select').onchange = e => { d.zona = e.target.value; };
+
+    if(d.trabajador){
+      main.appendChild(el(`<p class="question" style="margin-top:16px;">Estatus del trabajador al momento de la visita</p>`));
+      const ESTATUS = [
+        {val:'ACTIVO', label:'Activo', icon:'ti-check'},
+        {val:'VACACIONES', label:'Vacaciones', icon:'ti-beach'},
+        {val:'REPOSO', label:'Reposo', icon:'ti-medical-cross'},
+        {val:'DIA_LIBRE', label:'Día libre', icon:'ti-home'}
+      ];
+      const grid = document.createElement('div');
+      grid.style.display = 'grid';
+      grid.style.gridTemplateColumns = '1fr 1fr';
+      grid.style.gap = '8px';
+      grid.style.margin = '8px 0 16px';
+      ESTATUS.forEach(o => {
+        const active = d.estatus === o.val;
+        const btn = el(`<button class="pill ${active?'active':''}" style="${active?'background:var(--blue-pale);border-color:var(--blue-sky);color:var(--blue-mid);':''}"><i class="ti ${o.icon}"></i> ${o.label}</button>`);
+        btn.onclick = () => { d.estatus = o.val; render(); };
+        grid.appendChild(btn);
+      });
+      main.appendChild(grid);
+
+      if(d.estatus === 'VACACIONES' || d.estatus === 'REPOSO'){
+        main.appendChild(el(`<div class="card warning" style="margin-bottom:16px;"><p style="margin:0;font-size:13px;">El trabajador no está disponible hoy. Se guardará como <strong>Auditoría Justificada</strong> sin checklist de tareas, y esto SÍ cuenta para la cuota semanal de supervisión.</p></div>`));
+      } else if(d.estatus === 'DIA_LIBRE'){
+        main.appendChild(el(`<div class="card" style="background:var(--blue-pale);margin-bottom:16px;"><p style="margin:0;font-size:13px;color:var(--blue-mid);">Es el día libre del trabajador. Se pospone el checklist para otro día de la semana — este registro <strong>NO cuenta</strong> para la cuota semanal, que seguirá pendiente hasta evaluarlo activo.</p></div>`));
+      }
+    }
+
+    const esVacacionesReposo = d.estatus === 'VACACIONES' || d.estatus === 'REPOSO';
+    const esDiaLibre = d.estatus === 'DIA_LIBRE';
+    const esJustificada = esVacacionesReposo || esDiaLibre;
+    let labelBtn = 'Comenzar recorrido', iconBtn = 'ti-arrow-right';
+    if(esVacacionesReposo){ labelBtn = 'Guardar auditoría justificada'; iconBtn = 'ti-device-floppy'; }
+    if(esDiaLibre){ labelBtn = 'Registrar Día Libre - Posponer'; iconBtn = 'ti-calendar-pause'; }
+    const nav = el(`<div class="nav-buttons"><button class="btn btn-primary" id="go-next">${labelBtn} <i class="ti ${iconBtn}"></i></button></div>`);
+    main.appendChild(nav);
+    nav.querySelector('#go-next').onclick = async () => {
+      if(!d.turno || !d.evaluador || !d.trabajador || !d.zona){ alert('Complete turno, evaluador, trabajador y zona antes de continuar.'); return; }
+      if(!d.estatus){ alert('Seleccione el estatus del trabajador antes de continuar.'); return; }
+      if(d.estatus === 'ACTIVO'){ state.screen = 'm1'; state.ciclo = 1; render(); return; }
+      d.justificada = esVacacionesReposo;
+      d.excluida_cuota = esDiaLibre;
+      const btn = nav.querySelector('#go-next');
+      btn.disabled = true; btn.textContent = 'Guardando...';
+      audits.unshift(d);
+      const ok = await persistAudit(d);
+      state.draft = null;
+      state.tab = 'historial';
+      state.justSaved = ok;
+      render();
+    };
+    return;
+  }
+
+  if(state.screen === 'm1'){
+    const u = d.ubicaciones[state.ciclo-1];
+    main.appendChild(el(`<div class="progress-row"><span class="step-title">Auditoría de ubicaciones</span><span class="step-count">Ubicación ${state.ciclo} de 7</span></div>`));
+
+    const dots = el(`<div class="location-dots">${d.ubicaciones.map((x,i)=>{
+      const n=i+1, cls = n===state.ciclo ? 'current' : (x.slot&&x.puesto ? 'done':'');
+      return `<span class="${cls}">${n}</span>`;
+    }).join('')}</div>`);
+    main.appendChild(dots);
+
+    main.appendChild(el(`<p style="font-size:13px;color:var(--text-secondary);margin:0 0 12px;">Seleccione de manera aleatoria esta ubicación de despacho y valide.</p>`));
+
+    const scanBtn = el(`<button class="btn btn-scan"><i class="ti ti-camera"></i> ${u.code ? 'Volver a escanear' : 'Escanear código de barras'}</button>`);
+    main.appendChild(scanBtn);
+    main.appendChild(el(`<input type="text" value="${u.code}" placeholder="Código detectado" disabled style="margin-bottom:16px;">`));
+    scanBtn.onclick = async () => {
+      const result = await abrirCamara({ modoBarcode: true });
+      if(!result) return;
+      if(result.code){
+        u.code = result.code;
+      } else if(result.manual){
+        const val = prompt('No se detectó un código automáticamente. Ingréselo manualmente:', u.code || '');
+        if(val && val.trim()) u.code = val.trim();
+      }
+      render();
+    };
+
+    main.appendChild(el(`<p class="question">1.1 ¿El producto en el canal corresponde con el slot asignado?</p>`));
+    const p1 = el(pillsSVG('p1', u.slot));
+    main.appendChild(p1);
+    p1.querySelectorAll('.pill').forEach(b => b.onclick = () => { u.slot = b.dataset.val; render(); });
+
+    main.appendChild(el(`<p class="question">1.2 ¿El producto está ubicado en su puesto fijo o cerca del puesto de despacho?</p>`));
+    const p2 = el(pillsSVG('p2', u.puesto));
+    main.appendChild(p2);
+    p2.querySelectorAll('.pill').forEach(b => b.onclick = () => { u.puesto = b.dataset.val; render(); });
+
+    const nav = el(`<div class="nav-buttons">
+      <button class="btn" id="go-back"><i class="ti ti-arrow-left"></i> Atrás</button>
+      <button class="btn btn-primary" id="go-next">${state.ciclo<7 ? 'Siguiente ubicación' : 'Continuar'} <i class="ti ti-arrow-right"></i></button>
+    </div>`);
+    main.appendChild(nav);
+    nav.querySelector('#go-back').onclick = () => {
+      if(state.ciclo>1){ state.ciclo--; } else { state.screen='header'; }
+      render();
+    };
+    nav.querySelector('#go-next').onclick = () => {
+      if(!u.slot || !u.puesto){ alert('Responda ambas preguntas antes de continuar.'); return; }
+      if(state.ciclo<7){ state.ciclo++; } else { state.screen='m2'; }
+      render();
+    };
+    return;
+  }
+
+  if(state.screen === 'm2'){
+    main.appendChild(el(`<div class="progress-row"><span class="step-title">Entorno de trabajo</span><span class="step-count">Módulo 3 de 5</span></div>`));
+    main.appendChild(el(`<p class="question">2.1 ¿Los bultos en la zona se encuentran identificados con su slot correspondiente?</p>`));
+    const p = el(pillsSVG('p', d.bultos_identificados));
+    main.appendChild(p);
+    p.querySelectorAll('.pill').forEach(b => b.onclick = () => { d.bultos_identificados = b.dataset.val; render(); });
+
+    main.appendChild(el(`<label class="field-label">Aspectos a mejorar (instrucción 1)</label>`));
+    const ta = el(`<textarea placeholder="Describa hallazgos del recorrido de ubicaciones...">${d.aspectos_m1}</textarea>`);
+    main.appendChild(ta);
+    ta.oninput = e => d.aspectos_m1 = e.target.value;
+
+    const nav = el(`<div class="nav-buttons">
+      <button class="btn" id="go-back"><i class="ti ti-arrow-left"></i> Atrás</button>
+      <button class="btn btn-primary" id="go-next">Continuar <i class="ti ti-arrow-right"></i></button>
+    </div>`);
+    main.appendChild(nav);
+    nav.querySelector('#go-back').onclick = () => { state.screen='m1'; state.ciclo=7; render(); };
+    nav.querySelector('#go-next').onclick = () => {
+      if(!d.bultos_identificados || !d.aspectos_m1.trim()){ alert('Responda la pregunta y complete el campo de aspectos a mejorar.'); return; }
+      state.screen='m3'; render();
+    };
+    return;
+  }
+
+  if(state.screen === 'm3'){
+    main.appendChild(el(`<div class="progress-row"><span class="step-title">FEFO, disciplina y paletas</span><span class="step-count">Módulo 4 de 5</span></div>`));
+
+    main.appendChild(el(`<p class="question">3.1 ¿La fecha de vencimiento en despacho es más próxima que en reposición?</p>`));
+    const p1 = el(pillsSVG('p1', d.fefo));
+    main.appendChild(p1);
+    p1.querySelectorAll('.pill').forEach(b => b.onclick = () => { d.fefo = b.dataset.val; render(); });
+
+    const photo1 = el(`<button class="btn btn-photo ${d.foto_fefo?'done':''}"><i class="ti ${d.foto_fefo?'ti-check':'ti-camera'}"></i> ${d.foto_fefo ? 'Foto de fechas adjunta' : 'Tomar foto de fechas de vencimiento'}</button>`);
+    main.appendChild(photo1);
+    photo1.onclick = async () => {
+      const frame = await abrirCamara();
+      if(!frame) return;
+      photo1.textContent = 'Subiendo foto…';
+      const url = window.fbUploadPhoto ? await window.fbUploadPhoto(`fotos/${d.id}/fefo.jpg`, frame.blob) : null;
+      d.foto_fefo = true;
+      d.foto_fefo_url = url;
+      render();
+    };
+
+    if(d.fefo){
+      const card = el(`<div class="card">
+        <p style="margin:0 0 8px;font-size:12px;font-weight:600;color:var(--blue-mid);text-transform:uppercase;letter-spacing:0.03em;">Registro de vencimiento (obligatorio)</p>
+        <label class="field-label" style="margin-top:0;">SKU / Producto</label>
+        <input type="text" id="venc-sku" value="${d.venc_sku}" placeholder="Ej. SKU8842 - Analgésico X">
+        <label class="field-label">Ventana / Ubicación / Pasillo</label>
+        <input type="text" id="venc-ubicacion" value="${d.venc_ubicacion}" placeholder="Ej. HA-HM, ventana 12">
+        <label class="field-label">Fecha de vencimiento</label>
+        <input type="date" id="venc-fecha" value="${d.venc_fecha}">
+      </div>`);
+      main.appendChild(card);
+      card.querySelector('#venc-sku').oninput = e => { d.venc_sku = e.target.value; };
+      card.querySelector('#venc-ubicacion').oninput = e => { d.venc_ubicacion = e.target.value; };
+      card.querySelector('#venc-fecha').oninput = e => { d.venc_fecha = e.target.value; };
+    }
+
+    main.appendChild(el(`<p class="question">3.2 ¿Se cumple con el orden, detalle y limpieza de la zona (5S)?</p>`));
+    const p2 = el(pillsSVG('p2', d.cinco_s));
+    main.appendChild(p2);
+    p2.querySelectorAll('.pill').forEach(b => b.onclick = () => { d.cinco_s = b.dataset.val; render(); });
+
+    const photo2 = el(`<button class="btn btn-photo ${d.foto_5s?'done':''}"><i class="ti ${d.foto_5s?'ti-check':'ti-camera'}"></i> ${d.foto_5s ? 'Foto de la zona adjunta' : 'Tomar foto de la zona'}</button>`);
+    main.appendChild(photo2);
+    photo2.onclick = async () => {
+      const frame = await abrirCamara();
+      if(!frame) return;
+      photo2.textContent = 'Subiendo foto…';
+      const url = window.fbUploadPhoto ? await window.fbUploadPhoto(`fotos/${d.id}/5s.jpg`, frame.blob) : null;
+      d.foto_5s = true;
+      d.foto_5s_url = url;
+      render();
+    };
+
+    main.appendChild(el(`<label class="field-label">Aspectos a mejorar del trabajador</label>`));
+    const ta = el(`<textarea placeholder="Resumen general de la auditoría...">${d.aspectos_trabajador}</textarea>`);
+    main.appendChild(ta);
+    ta.oninput = e => d.aspectos_trabajador = e.target.value;
+
+    const nav = el(`<div class="nav-buttons">
+      <button class="btn" id="go-back"><i class="ti ti-arrow-left"></i> Atrás</button>
+      <button class="btn btn-primary" id="go-next">Continuar <i class="ti ti-arrow-right"></i></button>
+    </div>`);
+    main.appendChild(nav);
+    nav.querySelector('#go-back').onclick = () => { state.screen='m2'; render(); };
+    nav.querySelector('#go-next').onclick = () => {
+      if(!d.fefo || !d.cinco_s){ alert('Responda las preguntas del módulo antes de continuar.'); return; }
+      if(!d.venc_sku.trim() || !d.venc_ubicacion.trim() || !d.venc_fecha){ alert('Complete el registro de vencimiento (SKU, ubicación y fecha) antes de continuar.'); return; }
+      state.screen='m4'; render();
+    };
+    return;
+  }
+
+  if(state.screen === 'm4'){
+    main.appendChild(el(`<div class="progress-row"><span class="step-title">Cortes, seguridad y bulticos</span><span class="step-count">Módulo 5 de 5</span></div>`));
+
+    main.appendChild(el(`<p class="question">4.1 ¿La caja que contiene las unidades está abierta correctamente?</p>`));
+    const p1 = el(pillsSVG('p1', d.cortes_adecuados));
+    main.appendChild(p1);
+    p1.querySelectorAll('.pill').forEach(b => b.onclick = () => { d.cortes_adecuados = b.dataset.val; render(); });
+
+    main.appendChild(el(`<p class="question">4.2 ¿Las paletas vacías se encuentran limpias, ordenadas y libres de envoplast o cartón?</p>`));
+    const card = el(`<div class="card">
+      <label class="field-label" style="margin-top:0;">Número de ventanas que incumplen</label>
+      <input type="number" min="0" max="${TOTAL_VENTANAS}" id="ventanas-incumplen" value="${d.ventanas_incumplen}">
+    </div>`);
+    main.appendChild(card);
+    card.querySelector('#ventanas-incumplen').oninput = e => { d.ventanas_incumplen = e.target.value; render(); };
+
+    main.appendChild(el(`<p class="question">4.3 ¿El trabajador tiene todos sus implementos de seguridad (guantes anticortes, casco, manga anticortes)?</p>`));
+    const p3 = el(pillsSVG('p3', d.equipos_seguridad_ok));
+    main.appendChild(p3);
+    p3.querySelectorAll('.pill').forEach(b => b.onclick = () => { d.equipos_seguridad_ok = b.dataset.val; render(); });
+
+    main.appendChild(el(`<p class="question">4.4 ¿Hay paletas con bulticos por repositar en la zona evaluada?</p>`));
+    const p4 = el(pillsSVG('p4', d.bulticos_pendientes));
+    main.appendChild(p4);
+    p4.querySelectorAll('.pill').forEach(b => b.onclick = () => { d.bulticos_pendientes = b.dataset.val; render(); });
+
+    const nav2 = el(`<div class="nav-buttons">
+      <button class="btn" id="go-back"><i class="ti ti-arrow-left"></i> Atrás</button>
+      <button class="btn btn-primary" id="go-finish"><i class="ti ti-device-floppy"></i> Finalizar y guardar</button>
+    </div>`);
+    main.appendChild(nav2);
+    nav2.querySelector('#go-back').onclick = () => { state.screen='m3'; render(); };
+    nav2.querySelector('#go-finish').onclick = async () => {
+      if(!d.cortes_adecuados || d.ventanas_incumplen==='' || !d.equipos_seguridad_ok || !d.bulticos_pendientes){ alert('Complete las cuatro preguntas del módulo antes de finalizar.'); return; }
+      if(Number(d.ventanas_incumplen) > TOTAL_VENTANAS || Number(d.ventanas_incumplen) < 0){ alert('El número de ventanas que incumplen debe estar entre 0 y ' + TOTAL_VENTANAS + '.'); return; }
+      const btn = nav2.querySelector('#go-finish');
+      btn.disabled = true; btn.textContent = 'Guardando...';
+      audits.unshift(d);
+      const ok = await persistAudit(d);
+      if(d.venc_sku && d.venc_fecha){
+        const vReg = {
+          id: 'venc_' + d.id.replace('aud_',''),
+          sku: d.venc_sku, ubicacion: d.venc_ubicacion, fecha_vencimiento: d.venc_fecha,
+          turno: d.turno, trabajador: d.trabajador, zona: d.zona, evaluador: d.evaluador,
+          registrado_en: d.fecha_hora,
+          resuelto: false, resuelto_accion: null, resuelto_en: null
+        };
+        await persistVencimiento(vReg);
+      }
+      state.draft = null;
+      state.tab = 'historial';
+      state.justSaved = ok;
+      render();
+    };
+    return;
+  }
+}
+
+loadAll();
+</script>
+</body>
+</html>
